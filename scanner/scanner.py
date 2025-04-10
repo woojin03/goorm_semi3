@@ -21,19 +21,30 @@ with open("config.json") as f:
 
 scan_mode = config.get("scan_mode", "fast")
 
+# 포트 목록 설정
 if scan_mode == "full":
     ports_to_check = list(range(1, 65536))
 else:
     default_ports = [21, 22, 23, 80, 443, 3306, 3389, 8080, 8443, 12345]
-    if "ports" in config:
-        ports_to_check = config["ports"]
-    elif "port_range" in config:
-        start, end = config["port_range"]
-        ports_to_check = list(range(start, end + 1))
+
+    ports = config.get("ports", [])
+    port_range = config.get("port_range", [])
+
+    if ports:
+        ports_to_check = ports
+    elif isinstance(port_range, list) and len(port_range) == 2:
+        start, end = port_range
+        if isinstance(start, int) and isinstance(end, int) and 1 <= start <= 65535 and 1 <= end <= 65535:
+            ports_to_check = list(range(start, end + 1))
+        else:
+            ports_to_check = default_ports
     else:
         ports_to_check = default_ports
 
+
 USE_SHODAN = scan_mode != "full"
+
+
 
 # === 서비스명 정규화 ===
 SERVICE_NAME_MAP = {
@@ -268,7 +279,7 @@ def parse_nmap(ip, xml_data):
 if __name__ == "__main__":
     logger.info("=== Nmap 스캐너 시작 (모드: %s) ===" % scan_mode)
     targets = []
-    for entry in config.get("targets", []):
+    for entry in config.get("ip", []):
         try:
             net = ipaddress.ip_network(entry, strict=False)
             targets.extend([str(ip) for ip in net.hosts()])

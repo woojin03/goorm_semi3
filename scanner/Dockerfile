@@ -10,7 +10,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 # 현재 디렉토리의 모든 파일들을 컨테이너 내부 /app 디렉토리에 복사
-COPY scanner_test2.py ./  
+COPY scanner.py ./  
 COPY .env ./  
 COPY config.json ./
 COPY requirements.txt ./

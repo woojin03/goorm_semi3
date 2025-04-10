@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  scanner:
+    build:
+      context: ./scanner
+      dockerfile: Dockerfile
+    container_name: scanner
+    volumes:
+      - ./scanner:/app
+    working_dir: /app
+    networks:
+      - internal_network
+    environment:
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+
+networks:
+  internal_network:
+    external: true
+    name: internal_network

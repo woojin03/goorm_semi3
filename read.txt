@@ -27,8 +27,7 @@ semi3/
 ├── templates/
 ├── Scanner/       
 │   ├── Dockerfile
-│   ├── docker-compose.yml
 │   ├── config.json
-│   ├── targets.txt
-│   ├── scanner_test2.py
+│   ├── scanner.py
 │   └── requirements.txt
+── docker-compose.yml
