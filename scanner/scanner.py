@@ -61,7 +61,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("scanner")
 
 # === 위험도 계산 ===
-def calculate_risk(port, cves, is_shadow, shodan_count=0):
+def calculate_risk(port, cves, is_shadow):
     score = 0
     if port in [21, 23, 12345, 31337]:
         score += 5
@@ -72,8 +72,7 @@ def calculate_risk(port, cves, is_shadow, shodan_count=0):
                 score += 3
     if is_shadow:
         score += 15
-    if shodan_count > 500:
-        score += 3
+
     return "high" if score >= 15 else "medium" if score >= 7 else "low"
 
 def load_registered_assets():
