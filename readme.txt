@@ -1,0 +1,34 @@
+
+* fast api 설치 확인
+pip show fastapi 
+
+* uvicorn 설치 확인
+pip show uvicorn
+
+* 반드시 설치
+pip install fastapi
+pip install "uvicorn[standard]"
+pip install pytz
+pip install jinja2
+pip install pymongo
+
+
+* 한 번에 설치하는 코드
+pip install fastapi uvicorn jinja2 pymongo pytz
+
+
+python main.py로 실행!!
+
+scan 기능을 수행하기 위해서는 해당 프로젝트 폴더에 scanner 폴더를 넣어야함(정상동작조건)
+semi3/
+├── main.py
+├── scan.html
+├── static/
+├── templates/
+├── Scanner/       
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── config.json
+│   ├── targets.txt
+│   ├── scanner_test2.py
+│   └── requirements.txt

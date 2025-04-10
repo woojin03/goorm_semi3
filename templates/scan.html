@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Port Scan{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-1">
+  <h2 class="text-5xl font-bold mt-10 mb-6">Port Scan</h2>
+</div>
+
+<div class="border-b mb-6"></div>
+
+<p class="text-gray-600 mb-6 text-xs">
+    * 스캔할 장비(IP 목록)는 <strong>targets.txt</strong> 파일을 기준으로 스캔됩니다.<br>
+    * <strong>'포트 스캔 실행'</strong> 버튼을 클릭하면 스캐너가 자동 실행됩니다.
+  </p>
+
+<!-- 실행 버튼 -->
+<button id="scan-btn" onclick="startScan()" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-base py-3 rounded-xl font-semibold mb-6 disabled:opacity-50">
+  포트 스캔 실행
+</button>
+
+<!-- 결과 출력 박스 -->
+<pre id="scan-result" class="bg-gray-900 text-green-400 p-4 rounded-xl h-96 overflow-y-scroll text-xs">
+    스캔 결과가 여기에 출력됩니다.
+    </pre>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function startScan() {
+  const btn = document.getElementById('scan-btn');
+  const resultBox = document.getElementById('scan-result');
+
+  btn.disabled = true;
+  resultBox.textContent = "스캔 실행 중...\n";
+
+  const res = await fetch('/scan-port');
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  while(true) {
+    const { done, value } = await reader.read();
+    if(done) break;
+    resultBox.textContent += decoder.decode(value);
+    resultBox.scrollTop = resultBox.scrollHeight;
+  }
+
+  resultBox.textContent += "\n스캔이 완료되었습니다.";
+  btn.disabled = false;
+}
+</script>
+{% endblock %}

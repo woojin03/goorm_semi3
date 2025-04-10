@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Shadow IT{% endblock %}
+
+{% block content %}
+<!-- Shadow IT 탐지 페이지 상단 필터/검색-->
+<div class="flex items-center justify-between mb-6">
+  <div class="flex space-x-6 mb-6">
+    <input id="search-input" type="text" placeholder="IP 주소 검색" class="px-4 py-1 border rounded-lg w-96 shadow-sm" />
+    <input id="date-input" type="date" class="px-4 py-1 border rounded-lg w-60 shadow-sm" />
+  </div>
+</div>
+
+<div class="flex justify-between items-end border-b mb-6">
+  <h2 class="text-5xl font-bold mt-10 mb-6">Shadow IT 탐지 목록</h2>
+  <p class="text-xs text-gray-500 mb-3">※ 문서화되지 않은 보안 자산은 보안 점검 대상입니다.</p>
+</div>
+
+<!-- 카드 컨테이너 -->
+<div id="shadow-container" class="space-y-4"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let originalData = []; // ✅ 전체 원본 데이터를 전역 저장
+
+// 🔄 서버에서 자산 정보 가져오기
+async function fetchShadowAssets() {
+  const res = await fetch("/shadow-assets");
+  const data = await res.json();
+  originalData = data.filter(asset => !asset.is_registered); // ✅ 등록된 자산 제거 // ✅ 필터를 위한 원본 저장
+  applyFilters();       // ✅ 필터 적용된 상태로 렌더링
+}
+
+// 🧮 위험도 개수 계산 함수
+function countVulns(asset) {
+  return asset.open_ports?.reduce((acc, port) => acc + (port.cves?.length || 0), 0) || 0;
+}
+
+// 🎯 필터 적용 함수 (검색 + 날짜)
+function applyFilters() {
+  const keyword = document.getElementById("search-input").value.toLowerCase();
+  const date = document.getElementById("date-input").value;
+
+  const filtered = originalData.filter(asset => {
+    const ipMatch = asset.ip?.toLowerCase().includes(keyword);
+    const scanDate = asset.scan_date?.slice(0, 10); // ISO 날짜 자르기
+    const dateMatch = !date || scanDate === date;
+    return ipMatch && dateMatch;
+  });
+
+  renderShadowCards(filtered);
+}
+
+// 🧩 카드 렌더링
+function renderShadowCards(data) {
+  const container = document.getElementById("shadow-container");
+  container.innerHTML = "";
+
+  data.forEach(asset => {
+    const scanDate = asset.scan_date?.slice(0, 10) || "-";
+    const ports = asset.open_ports || [];
+
+    ports.forEach(port => {
+      console.log(`[DEBUG] IP: ${asset.ip}, PORT: ${port.port}, SERVICE: ${port.service}`);
+      const card = document.createElement("div");
+      card.className = "bg-gray-50 p-4 rounded-xl shadow-sm flex justify-between items-center";
+
+      card.innerHTML = `
+        <div class="w-36"><p class="font-semibold font-mono">${asset.ip}</p><p class="text-xs text-gray-500 mt-2">IP 주소</p></div>
+        <div class="w-36"><p class="font-semibold font-mono">${port.port || "-"}</p><p class="text-xs text-gray-500 mt-2">포트</p></div>
+        <div class="w-36"><p class="font-semibold font-mono">${port.service || "-"}</p><p class="text-xs text-gray-500 mt-2">서비스</p></div>
+        <div class="w-36"><p class="text-red-500 font-semibold font-mono">미등록</p><p class="text-xs text-gray-500 mt-2">등록여부</p></div>
+        <div class="w-36">
+          <p class="${(port.cves?.length || 0) > 0 ? 'text-red-500' : 'text-blue-600'} font-semibold font-mono">
+            ${(port.cves?.length || 0) > 0 ? "조사필요" : "확인요망"}
+          </p>
+          <p class="text-xs text-gray-500 mt-2">조치필요</p>
+        </div>
+        <div class="w-36"><p class="font-semibold text-gray-800 font-mono">${scanDate}</p><p class="text-xs text-gray-500 mt-2">분석일자</p></div>
+      `;
+      container.appendChild(card);
+    });
+  });
+}
+
+
+// 🔁 이벤트 리스너 등록
+document.addEventListener("DOMContentLoaded", () => {
+  fetchShadowAssets();
+
+  document.getElementById("search-input").addEventListener("input", applyFilters);
+  document.getElementById("date-input").addEventListener("change", applyFilters);
+
+  setInterval(fetchShadowAssets, 30000);  // 이후 30초마다 자동 갱신
+});
+</script>
+{% endblock %}

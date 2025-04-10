@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}DB csv{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-1">
+  <h2 class="text-5xl font-bold mt-10 mb-6">CSV 내보내기</h2>
+</div>
+
+<div class="border-b mb-6"></div>
+
+<p class="text-gray-600 mb-6 text-xs">
+  * CSV로 출력하고자 하는 DB의 날짜를 선택하고 <strong>'CSV로 내보내기'</strong> 버튼을 클릭하세요
+</p>
+
+<!-- 날짜 선택 폼 -->
+<div class="flex space-x-4 mb-6">
+  <input type="date" id="start-date" class="px-4 py-2 border rounded-lg shadow-sm w-60" />
+  <input type="date" id="end-date" class="px-4 py-2 border rounded-lg shadow-sm w-60" />
+</div>
+
+<!-- 미리보기 박스 -->
+<div class="bg-gray-50 p-6 rounded-xl shadow-inner border border-gray-200 mb-6">
+  <h3 class="text-sm font-semibold text-gray-800 mb-2">
+    📄 CSV로 내보내기될 DB의 내용 미리보기
+  </h3>
+  <pre id="preview-box" class="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">날짜를 선택하면 이곳에 미리보기가 표시됩니다.</pre>
+</div>
+
+<!-- 내보내기 버튼 -->
+<button id="export-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-base py-3 rounded-xl font-semibold disabled:opacity-50" disabled>
+  CSV로 내보내기
+</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const startInput = document.getElementById("start-date");
+  const endInput = document.getElementById("end-date");
+  const previewBox = document.getElementById("preview-box");
+  const exportBtn = document.getElementById("export-btn");
+
+  function updatePreview() {
+    const start = startInput.value;
+    const end = endInput.value;
+
+    if (start && end) {
+      fetch(`/preview-csv?start_date=${start}&end_date=${end}`)
+        .then(res => res.json())
+        .then(data => {
+          previewBox.textContent = JSON.stringify(data, null, 2);
+          exportBtn.disabled = false;
+        })
+        .catch(() => {
+          previewBox.textContent = "미리보기를 불러오는 데 실패했습니다.";
+          exportBtn.disabled = true;
+        });
+    } else {
+      previewBox.textContent = "날짜를 선택하면 이곳에 미리보기가 표시됩니다.";
+      exportBtn.disabled = true;
+    }
+  }
+
+  startInput.addEventListener("change", updatePreview);
+  endInput.addEventListener("change", updatePreview);
+
+
+  // 30초마다 자동 갱신
+  setInterval(updatePreview, 30000);
+
+  exportBtn.addEventListener("click", () => {
+    const start = startInput.value;
+    const end = endInput.value;
+    if (start && end) {
+      window.location.href = `/download-csv?start_date=${start}&end_date=${end}`;
+    }
+  });
+</script>
+{% endblock %}

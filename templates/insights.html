@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Insights{% endblock %}
+
+{% block content %}
+<!-- 🖨️ 프린트 전용 스타일 -->
+<style>
+@media print {
+  body, html {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .print-hide, aside, nav, header, input, button, .sidebar {
+    display: none !important;
+  }
+
+  .grid-cols-2 {
+    display: block !important;
+  }
+
+  .grid-cols-2 > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 24px;
+  }
+
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+</style>
+
+<!-- 제목 및 버튼 -->
+<div class="flex justify-between items-center mb-1">
+  <h2 class="text-5xl font-bold mt-10 mb-6">Insights</h2>
+  <button onclick="window.print()" class="print-hide bg-blue-600 hover:bg-blue-700 text-white text-xs px-4 py-2 rounded-xl shadow-sm">
+    리포트 내보내기
+  </button>
+</div>
+<div class="border-b mb-6"></div>
+
+<!-- 차트 영역 -->
+<div class="grid grid-cols-2 gap-6 mb-10">
+  <!-- 위험도 통계 -->
+  <div class="bg-white p-6 rounded-xl shadow-md break-inside-avoid">
+    <h3 class="text-lg font-bold mb-2 flex items-center gap-1 relative group"><span class="text-gray-400 cursor-pointer">📊</span>
+      <div class="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-60
+                  bg-black text-white text-xs rounded-lg py-2 px-3 opacity-0 group-hover:opacity-100
+                  transition duration-300 pointer-events-none shadow-lg">
+      최근 3일간 분석 결과에서 *등록되지 않은 비인가 자산(IP)*의 개수를 보여줍니다.
+      </div>
+      Shadow IT 탐지 추이</h3>
+    <canvas id="chartShadowTrend" width="400" height="220"></canvas>
+  </div>
+
+  <!-- 평균 위험도 추이 -->
+  <div class="bg-white p-6 rounded-xl shadow-md break-inside-avoid">
+    <h3 class="text-lg font-bold mb-2 flex items-center gap-1 relative group"><span class="text-gray-400 cursor-pointer">📈</span>
+      <div class="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-60
+                  bg-black text-white text-xs rounded-lg py-2 px-3 opacity-0 group-hover:opacity-100
+                  transition duration-300 pointer-events-none shadow-lg">
+        각 날짜별로 자산들의 위험도 등급을 점수화하여 평균을 낸 값입니다.
+        등급은 low(1점), medium(2점), high(3점) 기준으로 계산됩니다.
+      </div>
+      평균 위험도 추이</h3>
+    <canvas id="chartAvgRisk" width="400" height="220"></canvas>
+  </div>
+
+  <!-- 포트 개수 시각화 -->
+  <div class="bg-white p-6 rounded-xl shadow-md break-inside-avoid">
+    <h3 class="text-lg font-bold mb-2 flex items-center gap-1 relative group"><span class="text-gray-400 cursor-pointer">📶</span>
+      <div class="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-60
+                  bg-black text-white text-xs rounded-lg py-2 px-3 opacity-0 group-hover:opacity-100
+                  transition duration-300 pointer-events-none shadow-lg">
+                  가장 최근 분석일 기준으로 포트가 가장 많이 열린 상위 5개 IP를 나타냅니다.
+      </div>최근 열린 포트 수</h3>
+    <canvas id="chartPortCount" width="400" height="220"></canvas>
+  </div>
+
+  <!-- 취약점 발생 -->
+  <div class="bg-white p-6 rounded-xl shadow-md break-inside-avoid">
+    <h3 class="text-lg font-bold mb-2 flex items-center gap-1 relative group"><span class="text-gray-400 cursor-pointer">🧯</span>
+      <div class="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-60
+                  bg-black text-white text-xs rounded-lg py-2 px-3 opacity-0 group-hover:opacity-100
+                  transition duration-300 pointer-events-none shadow-lg">
+                  취약점이 탐지된 서비스명별 개수를 보여줍니다.
+      </div>최근 취약점 발생 서비스</h3>
+    <canvas id="chartVulnService" width="400" height="220"></canvas>
+  </div>
+</div>
+
+<!-- 조치 필요 자산 -->
+<div class="bg-white p-6 rounded-xl shadow-md break-inside-avoid">
+  <h3 class="text-lg font-bold mb-2 flex items-center gap-1 relative group"><span class="text-gray-400 cursor-pointer">🛠</span>
+    <div class="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-60
+                bg-black text-white text-xs rounded-lg py-2 px-3 opacity-0 group-hover:opacity-100
+                transition duration-300 pointer-events-none shadow-lg">
+                위험도 등급과 취약점 개수를 기준으로 가장 위험한 상위 3개 자산입니다.
+                <n></n>
+                우선적으로 점검하거나 격리해야 할 대상입니다.
+    </div>최근 조치 필요 자산 Top 3</h3>
+  <div id="top-assets" class="text-sm text-gray-600 space-y-2">
+    <p>불러오는 중...</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  let shadowTrendChart, avgRiskChart, portCountChart, vulnServiceChart;
+
+  async function fetchAndUpdateCharts() {
+    // Shadow IT Trend
+    const shadowData = await fetch('/shadow-trend').then(res => res.json());
+    if (shadowTrendChart) {
+      shadowTrendChart.data.labels = shadowData.map(d => d.date);
+      shadowTrendChart.data.datasets[0].data = shadowData.map(d => d.shadow_count);
+      shadowTrendChart.update();
+    } else {
+      shadowTrendChart = new Chart(document.getElementById('chartShadowTrend'), {
+        type: 'line',
+        data: {
+          labels: shadowData.map(d => d.date),
+          datasets: [{ label: 'Shadow IT', data: shadowData.map(d => d.shadow_count), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.3 }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+
+    // 평균 위험도 추이
+    const riskData = await fetch('/risk-trend').then(res => res.json());
+    if (avgRiskChart) {
+      avgRiskChart.data.labels = riskData.map(d => d.date);
+      avgRiskChart.data.datasets[0].data = riskData.map(d => d.avg_risk);
+      avgRiskChart.update();
+    } else {
+      avgRiskChart = new Chart(document.getElementById('chartAvgRisk'), {
+        type: 'line',
+        data: {
+          labels: riskData.map(d => d.date),
+          datasets: [{ label: '평균 위험도', data: riskData.map(d => d.avg_risk), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.2)', tension: 0.3 }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+
+    // 포트 개수
+    const portData = await fetch('/port-count').then(res => res.json());
+    if (portCountChart) {
+      portCountChart.data.labels = portData.map(d => d.ip);
+      portCountChart.data.datasets[0].data = portData.map(d => d.port_count);
+      portCountChart.update();
+    } else {
+      portCountChart = new Chart(document.getElementById('chartPortCount'), {
+        type: 'bar',
+        data: {
+          labels: portData.map(d => d.ip),
+          datasets: [{ label: '열린 포트 수', data: portData.map(d => d.port_count), backgroundColor: ['#6366f1', '#f97316', '#10b981', '#f59e0b', '#ec4899'] }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+
+    // 취약 서비스
+    const vulnData = await fetch('/vuln-services').then(res => res.json());
+    if (vulnServiceChart) {
+      vulnServiceChart.data.labels = vulnData.map(d => d.service);
+      vulnServiceChart.data.datasets[0].data = vulnData.map(d => d.count);
+      vulnServiceChart.update();
+    } else {
+      vulnServiceChart = new Chart(document.getElementById('chartVulnService'), {
+        type: 'doughnut',
+        data: {
+          labels: vulnData.map(d => d.service),
+          datasets: [{ label: '취약 서비스 수', data: vulnData.map(d => d.count), backgroundColor: ['#f87171', '#facc15', '#34d399', '#60a5fa', '#a78bfa'] }]
+        },
+        options: { responsive: true, aspectRatio: 2, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    // Top 3 자산
+    const topAssetsData = await fetch('/top-risk-assets').then(res => res.json());
+    const wrapper = document.getElementById('top-assets');
+    wrapper.innerHTML = "";
+    topAssetsData.forEach((a, i) => {
+      const el = document.createElement("p");
+      el.innerHTML = `${i + 1}. <span class="font-mono font-semibold">${a.ip}</span> - 위험도 <strong>${a.risk_level}</strong>, ${a.description || "설명 없음"}`;
+      wrapper.appendChild(el);
+    });
+  }
+
+  // 최초 실행
+  fetchAndUpdateCharts();
+
+  // 이후 30초마다 반복
+  setInterval(fetchAndUpdateCharts, 30000);
+});
+</script>
+{% endblock %}
