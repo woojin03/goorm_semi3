@@ -26,7 +26,7 @@ goorm x kakao : 정보보호 트랙 11회차
 - **Python 3.10** : Nmap 기반 스캐너 및 Shodan 연동 모듈 개발
 - **Docker / Docker Compose** : 내부망 자산 환경 가상화 및 고정 IP 설정
 - **Nmap** : 포트 스캔 및 서비스/버전 식별
-- **Shodan API** : 버전 기반 취약점 정보 수집
+- **NVD API** : 버전 기반 취약점 정보 수집
 - **MongoDB Atlas** : 자산/위험도 분석 결과 저장 및 조회
 - **MongoDB Compass** : 데이터 확인 및 편집
 - **Visual Studio Code** : 메인 개발 환경

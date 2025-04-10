@@ -19,6 +19,8 @@ pip install fastapi uvicorn jinja2 pymongo pytz
 
 python main.py로 실행!!
 
+
+
 scan 기능을 수행하기 위해서는 해당 프로젝트 폴더에 scanner 폴더를 넣어야함(정상동작조건)
 semi3/
 ├── main.py
@@ -31,3 +33,4 @@ semi3/
 │   ├── scanner.py
 │   └── requirements.txt
 ── docker-compose.yml
+
